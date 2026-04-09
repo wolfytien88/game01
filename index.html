@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>遊戲選單</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1 id="gameTitle">踩地雷</h1>
+
+    <div class="controls game-selector">
+      <label for="gameSelect">選擇遊戲：</label>
+      <select id="gameSelect">
+        <option value="minesweeper">踩地雷</option>
+        <option value="bee">小蜜蜂抓抓樂</option>
+      </select>
+    </div>
+
+    <section id="gamePanelMinesweeper" class="game-panel">
+      <div class="controls">
+        <label>
+          大小：
+          <select id="sizePicker">
+            <option value="9">9x9</option>
+            <option value="12">12x12</option>
+            <option value="15">15x15</option>
+          </select>
+        </label>
+        <label>
+          地雷：
+          <select id="minePicker">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="35">35</option>
+          </select>
+        </label>
+        <button id="restartButton">重新開始</button>
+      </div>
+
+      <div class="status-bar">
+        <span>剩餘地雷：<strong id="remainingMines">0</strong></span>
+        <span>狀態：<strong id="gameStatus">尚未開始</strong></span>
+      </div>
+
+      <div id="board" class="board"></div>
+    </section>
+
+    <section id="gamePanelBee" class="game-panel" style="display: none;">
+      <div class="controls">
+        <button id="beeStartButton">開始小蜜蜂遊戲</button>
+        <span>時間：<strong id="beeTimer">0</strong> 秒</span>
+        <span>得分：<strong id="beeScore">0</strong></span>
+        <span>目標：<strong id="beeTarget">10</strong></span>
+      </div>
+
+      <div class="status-bar">
+        <span id="beeStatus">準備中</span>
+      </div>
+
+      <div id="beeBoard" class="board bee-board"></div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
