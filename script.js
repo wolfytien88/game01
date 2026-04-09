@@ -1,7 +1,7 @@
 const gameSelect = document.getElementById('gameSelect');
 const gameTitle = document.getElementById('gameTitle');
 const gamePanelMine = document.getElementById('gamePanelMinesweeper');
-const gamePanelBee = document.getElementById('gamePanelBee');
+const gamePanelGalaxian = document.getElementById('gamePanelGalaxian');
 
 const boardElement = document.getElementById('board');
 const remainingMinesElement = document.getElementById('remainingMines');
@@ -10,12 +10,11 @@ const restartButton = document.getElementById('restartButton');
 const sizePicker = document.getElementById('sizePicker');
 const minePicker = document.getElementById('minePicker');
 
-const beeBoard = document.getElementById('beeBoard');
-const beeScoreElement = document.getElementById('beeScore');
-const beeTimerElement = document.getElementById('beeTimer');
-const beeStatusElement = document.getElementById('beeStatus');
-const beeStartButton = document.getElementById('beeStartButton');
-const beeTargetElement = document.getElementById('beeTarget');
+const galaxianBoard = document.getElementById('galaxianBoard');
+const galaxianScoreElement = document.getElementById('galaxianScore');
+const galaxianLivesElement = document.getElementById('galaxianLives');
+const galaxianStatusElement = document.getElementById('galaxianStatus');
+const galaxianStartButton = document.getElementById('galaxianStartButton');
 
 let currentGame = gameSelect.value;
 
@@ -33,26 +32,29 @@ const directions = [
   [1, -1], [1, 0], [1, 1],
 ];
 
-const beeRows = 5;
-const beeCols = 9;
-const beeWaveBees = 6;
-const beeTarget = 10;
-let beeCells = [];
-let beeScore = 0;
-let beeTimer = 25;
-let beeActive = false;
-let beeMoveInterval = null;
-let beeTimerInterval = null;
+const galaxianRows = 12;
+const galaxianCols = 10;
+let galaxianCells = [];
+let galaxianScore = 0;
+let galaxianLives = 3;
+let galaxianActive = false;
+let galaxianPlayerPos = 5;
+let galaxianEnemies = [];
+let galaxianBullets = [];
+let galaxianEnemyBullets = [];
+let galaxianGameInterval = null;
+let galaxianEnemyMoveDirection = 1;
+let galaxianEnemyMoveDown = false;
 
 function updateGameView() {
   const gameMap = {
     minesweeper: '踩地雷',
-    bee: '小蜜蜂抓抓樂',
+    galaxian: 'Galaxian 小蜜蜂',
   };
 
   gameTitle.textContent = gameMap[currentGame] || '遊戲選單';
   gamePanelMine.style.display = currentGame === 'minesweeper' ? 'block' : 'none';
-  gamePanelBee.style.display = currentGame === 'bee' ? 'block' : 'none';
+  gamePanelGalaxian.style.display = currentGame === 'galaxian' ? 'block' : 'none';
 }
 
 function createBoard() {
@@ -217,121 +219,208 @@ function resetGame() {
   renderBoard();
 }
 
-function initializeBeeGame() {
-  beeCells = Array.from({ length: beeRows }, () => Array.from({ length: beeCols }, () => ({
-    hasBee: false,
+function initializeGalaxianGame() {
+  galaxianCells = Array.from({ length: galaxianRows }, () => Array.from({ length: galaxianCols }, () => ({
+    type: 'empty', // 'player', 'enemy', 'bullet', 'enemy-bullet'
   })));
-  beeBoard.style.gridTemplateColumns = `repeat(${beeCols}, minmax(0, 1fr))`;
-  beeTargetElement.textContent = beeTarget;
-  updateBeeStatus('準備中');
-  renderBeeBoard();
+  galaxianBoard.style.gridTemplateColumns = `repeat(${galaxianCols}, minmax(0, 1fr))`;
+  galaxianScoreElement.textContent = galaxianScore;
+  galaxianLivesElement.textContent = galaxianLives;
+  updateGalaxianStatus('準備中');
+  renderGalaxianBoard();
 }
 
-function placeBees() {
-  beeCells.forEach(row => row.forEach(cell => { cell.hasBee = false; }));
-  const placed = new Set();
-  while (placed.size < beeWaveBees) {
-    const index = Math.floor(Math.random() * beeRows * beeCols);
-    if (placed.has(index)) continue;
-    placed.add(index);
-    const r = Math.floor(index / beeCols);
-    const c = index % beeCols;
-    beeCells[r][c].hasBee = true;
-  }
-}
-
-function renderBeeBoard() {
-  beeBoard.innerHTML = '';
-  for (let r = 0; r < beeRows; r++) {
-    for (let c = 0; c < beeCols; c++) {
-      const cellData = beeCells[r][c];
-      const cell = document.createElement('button');
-      cell.type = 'button';
-      cell.className = 'bee-cell';
+function renderGalaxianBoard() {
+  galaxianBoard.innerHTML = '';
+  for (let r = 0; r < galaxianRows; r++) {
+    for (let c = 0; c < galaxianCols; c++) {
+      const cellData = galaxianCells[r][c];
+      const cell = document.createElement('div');
+      cell.className = 'galaxian-cell';
       cell.dataset.row = r;
       cell.dataset.col = c;
-      cell.addEventListener('click', handleBeeClick);
 
-      if (cellData.hasBee && !beeActive) {
-        cell.classList.add('caught');
+      if (cellData.type === 'player') {
+        cell.classList.add('player');
+        cell.textContent = '🚀';
+      } else if (cellData.type === 'enemy') {
+        cell.classList.add('enemy');
         cell.textContent = '🐝';
+      } else if (cellData.type === 'bullet') {
+        cell.classList.add('bullet');
+        cell.textContent = '•';
+      } else if (cellData.type === 'enemy-bullet') {
+        cell.classList.add('enemy-bullet');
+        cell.textContent = '•';
       }
 
-      beeBoard.appendChild(cell);
+      galaxianBoard.appendChild(cell);
     }
   }
 }
 
-function handleBeeClick(event) {
-  if (!beeActive) return;
-  const button = event.currentTarget;
-  const r = Number(button.dataset.row);
-  const c = Number(button.dataset.col);
-  const cellData = beeCells[r][c];
+function updateGalaxianStatus(message) {
+  galaxianScoreElement.textContent = galaxianScore;
+  galaxianLivesElement.textContent = galaxianLives;
+  galaxianStatusElement.textContent = message;
+}
 
-  if (!cellData.hasBee) return;
+function startGalaxianGame() {
+  stopGalaxianIntervals();
+  galaxianScore = 0;
+  galaxianLives = 3;
+  galaxianActive = true;
+  galaxianPlayerPos = 5;
+  galaxianEnemies = [];
+  galaxianBullets = [];
+  galaxianEnemyBullets = [];
+  galaxianEnemyMoveDirection = 1;
+  galaxianEnemyMoveDown = false;
 
-  cellData.hasBee = false;
-  beeScore += 1;
-  updateBeeStatus('抓到小蜜蜂！');
-  renderBeeBoard();
+  // Initialize enemies
+  for (let r = 1; r <= 3; r++) {
+    for (let c = 1; c < galaxianCols - 1; c++) {
+      galaxianEnemies.push({ r, c });
+    }
+  }
 
-  if (beeScore >= beeTarget) {
-    endBeeGame(true);
+  updateGalaxianStatus('遊戲進行中');
+  renderGalaxianBoard();
+
+  galaxianGameInterval = setInterval(() => {
+    if (!galaxianActive) return;
+    updateGalaxianGame();
+    renderGalaxianBoard();
+  }, 500);
+
+  // Handle keyboard input
+  document.addEventListener('keydown', handleGalaxianKey);
+}
+
+function stopGalaxianIntervals() {
+  clearInterval(galaxianGameInterval);
+  galaxianGameInterval = null;
+  document.removeEventListener('keydown', handleGalaxianKey);
+}
+
+function handleGalaxianKey(event) {
+  if (!galaxianActive) return;
+  if (event.key === 'ArrowLeft' && galaxianPlayerPos > 0) {
+    galaxianPlayerPos -= 1;
+  } else if (event.key === 'ArrowRight' && galaxianPlayerPos < galaxianCols - 1) {
+    galaxianPlayerPos += 1;
+  } else if (event.key === ' ') {
+    event.preventDefault();
+    shootGalaxianBullet();
   }
 }
 
-function updateBeeStatus(message) {
-  beeScoreElement.textContent = beeScore;
-  beeTimerElement.textContent = beeTimer;
-  beeStatusElement.textContent = message;
+function shootGalaxianBullet() {
+  galaxianBullets.push({ r: galaxianRows - 1, c: galaxianPlayerPos });
 }
 
-function startBeeGame() {
-  stopBeeIntervals();
-  beeScore = 0;
-  beeTimer = 25;
-  beeActive = true;
-  updateBeeStatus('遊戲進行中');
-  placeBees();
-  renderBeeBoard();
+function updateGalaxianGame() {
+  // Clear cells
+  galaxianCells.forEach(row => row.forEach(cell => cell.type = 'empty'));
 
-  beeTimerInterval = setInterval(() => {
-    beeTimer -= 1;
-    if (beeTimer <= 0) {
-      endBeeGame(false);
-      return;
+  // Place player
+  galaxianCells[galaxianRows - 1][galaxianPlayerPos].type = 'player';
+
+  // Move enemies
+  let moveDown = false;
+  galaxianEnemies.forEach(enemy => {
+    enemy.c += galaxianEnemyMoveDirection;
+    if (enemy.c <= 0 || enemy.c >= galaxianCols - 1) {
+      moveDown = true;
     }
-    updateBeeStatus('遊戲進行中');
-  }, 1000);
+  });
 
-  beeMoveInterval = setInterval(() => {
-    if (!beeActive) return;
-    placeBees();
-    renderBeeBoard();
-  }, 1200);
+  if (moveDown) {
+    galaxianEnemyMoveDirection *= -1;
+    galaxianEnemies.forEach(enemy => enemy.r += 1);
+  }
+
+  // Place enemies
+  galaxianEnemies.forEach(enemy => {
+    if (enemy.r >= 0 && enemy.r < galaxianRows && enemy.c >= 0 && enemy.c < galaxianCols) {
+      galaxianCells[enemy.r][enemy.c].type = 'enemy';
+    }
+  });
+
+  // Move bullets
+  galaxianBullets = galaxianBullets.filter(bullet => {
+    bullet.r -= 1;
+    if (bullet.r >= 0) {
+      galaxianCells[bullet.r][bullet.c].type = 'bullet';
+      return true;
+    }
+    return false;
+  });
+
+  // Move enemy bullets
+  galaxianEnemyBullets = galaxianEnemyBullets.filter(bullet => {
+    bullet.r += 1;
+    if (bullet.r < galaxianRows) {
+      galaxianCells[bullet.r][bullet.c].type = 'enemy-bullet';
+      return true;
+    }
+    return false;
+  });
+
+  // Check collisions
+  galaxianBullets.forEach(bullet => {
+    galaxianEnemies.forEach((enemy, index) => {
+      if (enemy.r === bullet.r && enemy.c === bullet.c) {
+        galaxianEnemies.splice(index, 1);
+        galaxianScore += 10;
+        bullet.r = -1; // Mark for removal
+      }
+    });
+  });
+
+  galaxianBullets = galaxianBullets.filter(bullet => bullet.r >= 0);
+
+  // Enemy shoot
+  if (Math.random() < 0.1 && galaxianEnemies.length > 0) {
+    const randomEnemy = galaxianEnemies[Math.floor(Math.random() * galaxianEnemies.length)];
+    galaxianEnemyBullets.push({ r: randomEnemy.r, c: randomEnemy.c });
+  }
+
+  // Check player hit
+  galaxianEnemyBullets.forEach(bullet => {
+    if (bullet.r === galaxianRows - 1 && bullet.c === galaxianPlayerPos) {
+      galaxianLives -= 1;
+      if (galaxianLives <= 0) {
+        endGalaxianGame(false);
+      } else {
+        updateGalaxianStatus('被擊中！');
+      }
+      bullet.r = galaxianRows; // Mark for removal
+    }
+  });
+
+  galaxianEnemyBullets = galaxianEnemyBullets.filter(bullet => bullet.r < galaxianRows);
+
+  // Check win
+  if (galaxianEnemies.length === 0) {
+    endGalaxianGame(true);
+  }
+
+  // Check lose
+  if (galaxianEnemies.some(enemy => enemy.r >= galaxianRows - 1)) {
+    endGalaxianGame(false);
+  }
 }
 
-function endBeeGame(won) {
-  beeActive = false;
-  stopBeeIntervals();
+function endGalaxianGame(won) {
+  galaxianActive = false;
+  stopGalaxianIntervals();
   if (won) {
-    updateBeeStatus('你贏了！抓到足夠的小蜜蜂！');
+    updateGalaxianStatus('你贏了！所有敵人被消滅！');
   } else {
-    if (beeTimer <= 0) {
-      updateBeeStatus('時間到，遊戲結束！');
-    } else {
-      updateBeeStatus('遊戲已停止');
-    }
+    updateGalaxianStatus('遊戲結束！');
   }
-  renderBeeBoard();
-}
-
-function stopBeeIntervals() {
-  clearInterval(beeMoveInterval);
-  clearInterval(beeTimerInterval);
-  beeMoveInterval = null;
-  beeTimerInterval = null;
+  renderGalaxianBoard();
 }
 
 gameSelect.addEventListener('change', event => {
@@ -346,11 +435,11 @@ restartButton.addEventListener('click', () => {
   updateGameView();
 });
 
-beeStartButton.addEventListener('click', () => {
-  currentGame = 'bee';
-  gameSelect.value = 'bee';
+galaxianStartButton.addEventListener('click', () => {
+  currentGame = 'galaxian';
+  gameSelect.value = 'galaxian';
   updateGameView();
-  startBeeGame();
+  startGalaxianGame();
 });
 
 sizePicker.addEventListener('change', () => {
@@ -368,4 +457,4 @@ minePicker.addEventListener('change', () => {
 
 updateGameView();
 resetGame();
-initializeBeeGame();
+initializeGalaxianGame();

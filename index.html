@@ -14,7 +14,7 @@
       <label for="gameSelect">選擇遊戲：</label>
       <select id="gameSelect">
         <option value="minesweeper">踩地雷</option>
-        <option value="bee">小蜜蜂抓抓樂</option>
+        <option value="galaxian">Galaxian 小蜜蜂</option>
       </select>
     </div>
 
@@ -47,19 +47,18 @@
       <div id="board" class="board"></div>
     </section>
 
-    <section id="gamePanelBee" class="game-panel" style="display: none;">
+    <section id="gamePanelGalaxian" class="game-panel" style="display: none;">
       <div class="controls">
-        <button id="beeStartButton">開始小蜜蜂遊戲</button>
-        <span>時間：<strong id="beeTimer">0</strong> 秒</span>
-        <span>得分：<strong id="beeScore">0</strong></span>
-        <span>目標：<strong id="beeTarget">10</strong></span>
+        <button id="galaxianStartButton">開始 Galaxian</button>
+        <span>得分：<strong id="galaxianScore">0</strong></span>
+        <span>生命：<strong id="galaxianLives">3</strong></span>
       </div>
 
       <div class="status-bar">
-        <span id="beeStatus">準備中</span>
+        <span id="galaxianStatus">準備中</span>
       </div>
 
-      <div id="beeBoard" class="board bee-board"></div>
+      <div id="galaxianBoard" class="board galaxian-board"></div>
     </section>
   </div>
 
